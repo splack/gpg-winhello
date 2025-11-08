@@ -15,11 +15,11 @@ class Program
 
             if (args.Length > 0 && args[0].ToLowerInvariant() == "setup")
             {
-                return await Setup.RunAsync();
+                return await Setup.RunAsync().ConfigureAwait(false);
             }
             else
             {
-                return await Pinentry.RunAsync();
+                return await Pinentry.RunAsync().ConfigureAwait(false);
             }
         }
         catch (Exception ex)
