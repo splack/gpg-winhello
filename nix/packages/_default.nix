@@ -13,7 +13,7 @@ let
 in
 buildDotnetModule {
   pname = "gpg-winhello";
-  version = "0.1.2";
+  version = "0.2.0";
 
   src = lib.cleanSource ../..;
   projectFile = "GpgWinHello.csproj";
