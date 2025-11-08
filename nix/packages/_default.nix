@@ -10,12 +10,42 @@ let
     inherit lib runCommand xq-xml dotnetCorePackages;
   };
   inherit (dotnetVersion) props dotnetSdk;
+
+  # Filter source to include only files needed for build
+  src = lib.cleanSourceWith {
+    src = ../..;
+    filter = path: type:
+      let
+        baseName = baseNameOf path;
+        relPath = lib.removePrefix (toString ../..) (toString path);
+      in
+      # Include specific files and directories needed for build
+      (
+        # C# source files
+        lib.hasSuffix ".cs" baseName
+        # Project file
+        || lib.hasSuffix ".csproj" baseName
+        # Documentation
+        || baseName == "LICENSE"
+        || baseName == "README.md"
+        || baseName == "CHANGELOG.md"
+        # Nix build files
+        || baseName == "flake.nix"
+        || baseName == "flake.lock"
+        || baseName == ".envrc"
+        || baseName == ".gitignore"
+        # Nix directory
+        || lib.hasPrefix "/nix" relPath
+        # PowerShell build script (optional, for reference)
+        || baseName == "build.ps1"
+      );
+  };
 in
 buildDotnetModule {
   pname = "gpg-winhello";
   version = "0.2.0";
 
-  src = lib.cleanSource ../..;
+  src = src;
   projectFile = "GpgWinHello.csproj";
   nugetDeps = ./deps.json;
 
