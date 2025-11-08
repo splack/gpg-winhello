@@ -59,27 +59,27 @@ jobs:
 
       - name: Create release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          body: |
-            # GPG Windows Hello ${{ steps.version.outputs.version }}
+        run: |
+          gh release create ${{ github.ref_name }} \
+            dist/* \
+            --title "GPG Windows Hello ${{ steps.version.outputs.version }}" \
+            --notes "# GPG Windows Hello ${{ steps.version.outputs.version }}
 
-            Use Windows Hello fingerprint authentication to unlock GPG SSH agent.
+          Use Windows Hello fingerprint authentication to unlock GPG SSH agent.
 
-            ## Installation
+          ## Installation
 
-            1. Download `gpg-winhello.exe`
-            2. Run `gpg-winhello.exe setup` to configure Windows Hello encryption
-            3. Configure GPG agent to use this as pinentry program
+          1. Download \`gpg-winhello.exe\`
+          2. Run \`gpg-winhello.exe setup\` to configure Windows Hello encryption
+          3. Configure GPG agent to use this as pinentry program
 
-            See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for full instructions.
+          See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for full instructions.
 
-            ## Verification
+          ## Verification
 
-            ```powershell
-            # Verify SHA256 hash
-            Get-FileHash gpg-winhello.exe -Algorithm SHA256
-            ```
+          \`\`\`powershell
+          # Verify SHA256 hash
+          Get-FileHash gpg-winhello.exe -Algorithm SHA256
+          \`\`\`"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
