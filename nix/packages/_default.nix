@@ -6,6 +6,8 @@
 }:
 
 let
+  version = "0.2.1";
+
   dotnetVersion = import ../dotnet-version.nix {
     inherit lib runCommand xq-xml dotnetCorePackages;
   };
@@ -43,9 +45,9 @@ let
 in
 buildDotnetModule {
   pname = "gpg-winhello";
-  version = "0.2.0";
+  inherit version;
 
-  src = src;
+  inherit src;
   projectFile = "GpgWinHello.csproj";
   nugetDeps = ./deps.json;
 
@@ -56,10 +58,13 @@ buildDotnetModule {
   selfContainedBuild = props.SelfContained == "true";
   runtimeId = props.RuntimeIdentifier;
 
-  # Pass Windows targeting and AssemblyName to all dotnet commands
+  # Pass Windows targeting, AssemblyName, and Version to all dotnet commands
   dotnetFlags = [
     "-p:EnableWindowsTargeting=true"
     "-p:AssemblyName=gpg-winhello"
+    "-p:Version=${version}"
+    "-p:AssemblyVersion=${version}.0"
+    "-p:FileVersion=${version}.0"
   ];
   dotnetBuildFlags = lib.optional (props.PublishSingleFile == "true") "-p:PublishSingleFile=true";
 

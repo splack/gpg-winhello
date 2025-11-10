@@ -1,3 +1,5 @@
+using System.Reflection;
+
 namespace GpgWinHello;
 
 /// <summary>
@@ -5,6 +7,12 @@ namespace GpgWinHello;
 /// </summary>
 public static class Constants
 {
+    /// <summary>
+    /// Application version. Injected at build time via MSBuild Version property.
+    /// </summary>
+    public static readonly string Version =
+        Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "0.0.0";
+
     /// <summary>
     /// Assuan protocol error codes for pinentry.
     /// </summary>

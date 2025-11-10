@@ -11,7 +11,7 @@ Unlock your GPG SSH agent using Windows Hello fingerprint authentication.
 
 ## How It Works
 
-1. **Setup**: Encrypts your GPG passphrase using Windows Hello (RSA-2048 + TPM)
+1. **Enrollment**: Encrypts your GPG passphrase using Windows Hello (RSA-2048 + TPM)
 2. **Usage**: Each SSH/GPG operation triggers fingerprint scan to decrypt
    passphrase
 3. **Security**: Private key never leaves TPM; passphrase encrypted at rest
@@ -26,47 +26,57 @@ Unlock your GPG SSH agent using Windows Hello fingerprint authentication.
 
 See [Building](#building) for how to build the executable.
 
-### 1. Initial Setup
+### Quick Install (Recommended)
 
-**Run setup mode**:
+Run these three commands:
 
 ```powershell
-.\gpg-winhello.exe setup
+.\gpg-winhello.exe install    # Copy to permanent location
+.\gpg-winhello.exe enroll     # Enroll passphrase with Windows Hello
+.\gpg-winhello.exe config     # Configure GPG agent
 ```
 
-This will:
-
-1. Create a Windows Hello key (prompts for fingerprint)
-2. Ask for your GPG passphrase (twice for confirmation)
-3. Encrypt and save the passphrase to `%APPDATA%\gpg-winhello\passphrase.enc`
-
-### 2. Configure GPG
-
-**Copy executable to a permanent location**:
+Or use the automated workflow:
 
 ```powershell
-# Example: Copy to GPG installation directory
+.\gpg-winhello.exe install
+# Follow prompts to enroll and configure
+```
+
+### Manual Installation (Alternative)
+
+If you prefer manual installation or need a different location:
+
+**Option A: User-level location (no admin required)**:
+
+```powershell
+# Create directory
+New-Item -ItemType Directory -Force -Path "$env:LOCALAPPDATA\Programs\gpg-winhello"
+
+# Copy executable
+Copy-Item gpg-winhello.exe "$env:LOCALAPPDATA\Programs\gpg-winhello\"
+
+# Enroll passphrase
+cd "$env:LOCALAPPDATA\Programs\gpg-winhello"
+.\gpg-winhello.exe enroll
+
+# Configure GPG agent
+.\gpg-winhello.exe config
+```
+
+**Option B: System-level location (requires administrator)**:
+
+```powershell
+# Run PowerShell as Administrator (Right-click > Run as Administrator), then:
 Copy-Item gpg-winhello.exe "C:\Program Files (x86)\GnuPG\bin\"
+
+# Enroll and configure
+cd "C:\Program Files (x86)\GnuPG\bin\"
+.\gpg-winhello.exe enroll
+.\gpg-winhello.exe config
 ```
 
-**Edit `gpg-agent.conf`**:
-
-Location: `%APPDATA%\gnupg\gpg-agent.conf`
-
-Add this line:
-
-```
-pinentry-program C:\Program Files (x86)\GnuPG\bin\gpg-winhello.exe
-```
-
-**Restart gpg-agent**:
-
-```powershell
-gpg-connect-agent killagent /bye
-gpg-connect-agent /bye
-```
-
-### 3. Test
+### Test
 
 Try using SSH with your GPG authentication key:
 
@@ -74,7 +84,30 @@ Try using SSH with your GPG authentication key:
 ssh git@github.com
 ```
 
-You should be prompted for fingerprint authentication via Windows Hello.
+You'll see an info dialog showing what credential is being requested, then Windows Hello fingerprint authentication will be triggered.
+
+**Note**: You can disable the info dialog in the config if you prefer to go straight to Windows Hello.
+
+## Configuration
+
+gpg-winhello is configured via a JSON file at `%APPDATA%\gpg-winhello\config.json`.
+
+**Configuration options:**
+- **Info Dialog**: Show informational dialog before Windows Hello prompt (default: enabled)
+- **Logging**: Log credential requests for troubleshooting (default: disabled)
+- **Log Path**: Customize log file location (default: `%APPDATA%\gpg-winhello\prompt.log`)
+
+**See [CONFIG.md](CONFIG.md) for complete documentation and examples.**
+
+Quick example - disable info dialog:
+```json
+{
+  "Version": 1,
+  "InfoDialog": {
+    "Enabled": false
+  }
+}
+```
 
 ## Security Considerations
 
@@ -108,13 +141,13 @@ You should be prompted for fingerprint authentication via Windows Hello.
 
 ### "Not configured" error
 
-- Run `gpg-winhello.exe setup` first
+- Run `gpg-winhello.exe enroll` first
 - Check `%APPDATA%\gpg-winhello\passphrase.enc` exists
 
 ### "Decryption failed"
 
 - Your Windows Hello key may have changed
-- Re-run `gpg-winhello.exe setup` to re-encrypt
+- Re-run `gpg-winhello.exe enroll` to re-encrypt
 - Check Windows Hello settings haven't been reset
 
 ### GPG agent not using pinentry
@@ -138,9 +171,9 @@ max-cache-ttl 7200
 
 This caches for 1 hour (avoids repeated fingerprint scans).
 
-### Logging
+### GPG Agent Logging
 
-Pinentry errors are written to stderr. To debug:
+To debug GPG agent communication:
 
 ```powershell
 # In gpg-agent.conf
@@ -150,16 +183,16 @@ debug-level advanced
 
 ### Multiple Passphrases
 
-Currently supports one GPG key passphrase. For multiple keys:
+Currently supports only one GPG key passphrase. If you have multiple GPG keys:
 
-- Use same passphrase for all keys (less secure)
-- Or run setup multiple times with different storage paths (modify source)
+- **Recommended**: Use the same passphrase for all keys
+- **Not currently supported**: Different passphrases per key (would require source code modifications)
 
 ## Technical Details
 
 ### Encryption
 
-- **Algorithm**: AES-256-CBC
+- **Algorithm**: AES-256-GCM (authenticated encryption)
 - **Key derivation**: SHA-256 hash of Windows Hello RSA signature
 - **Challenge**: Fixed string "gpg-winhello-deterministic-challenge-v1"
 - **Signature**: RSA-2048-PKCS1-SHA256 (Windows Hello default)
@@ -167,8 +200,9 @@ Currently supports one GPG key passphrase. For multiple keys:
 ### Storage
 
 - **Location**: `%APPDATA%\gpg-winhello\passphrase.enc`
-- **Format**: 16-byte IV + AES-encrypted passphrase
+- **Format**: [1 byte version][12 bytes nonce][16 bytes tag][encrypted data]
 - **Permissions**: User-only access (Windows ACLs)
+- **Security**: Authentication tag prevents tampering and padding oracle attacks
 
 ### Pinentry Protocol
 
@@ -228,13 +262,17 @@ nix develop
 ### Testing
 
 ```powershell
-# Test setup mode
-.\gpg-winhello.exe setup
+# Test enrollment
+.\gpg-winhello.exe enroll
+
+# Test configuration
+.\gpg-winhello.exe config
 
 # Test pinentry mode (manual protocol)
 .\gpg-winhello.exe
+# Type: SETDESC Please unlock the card
 # Type: GETPIN
-# Should trigger Windows Hello and return encrypted passphrase
+# Should show info dialog, then trigger Windows Hello and return encrypted passphrase
 ```
 
 ### Updating Dependencies (Nix)
@@ -258,7 +296,7 @@ MIT License - feel free to modify and distribute.
 Issues and PRs welcome! Areas for improvement:
 
 - Support for multiple GPG keys
-- GUI for setup instead of CLI
+- GUI for enrollment instead of CLI
 - Fallback to cached passphrase on Hello failure
 - Integration tests with actual GPG agent
 

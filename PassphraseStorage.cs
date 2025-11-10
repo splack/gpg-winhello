@@ -1,17 +1,27 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.AccessControl;
 using System.Security.Cryptography;
 using System.Security.Principal;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace GpgWinHello;
 
 /// <summary>
-/// Handles storage of encrypted passphrases to disk with version control.
-/// File format: [1 byte version][encrypted data]
-/// Version 1: [1 byte version][12 bytes nonce][16 bytes tag][encrypted data]
+/// Handles storage of encrypted credentials to disk with version control.
+/// File format (v2): JSON with multiple credential types
+/// {
+///   "version": 2,
+///   "credentials": {
+///     "pin": "base64-encoded-encrypted-pin",
+///     "passphrase": "base64-encoded-passphrase"
+///   }
+/// }
+/// Each encrypted value: [12 bytes nonce][16 bytes tag][encrypted data]
 /// </summary>
-public static class PassphraseStorage
+public static partial class PassphraseStorage
 {
     /// <summary>
     /// Storage directory for encrypted passphrases.
@@ -24,9 +34,78 @@ public static class PassphraseStorage
 
     private static readonly string PassphraseFile = Path.Combine(StoragePath, "passphrase.enc");
 
+    private class CredentialsFile
+    {
+        public int Version { get; set; } = 2;
+        public Dictionary<string, string> Credentials { get; set; } = new();
+    }
+
     /// <summary>
-    /// Saves an encrypted passphrase to disk with version header and user-only permissions.
-    /// This is Windows-specific and sets ACLs to restrict access to the current user.
+    /// JSON source generator context for Native AOT compatibility.
+    /// </summary>
+    [JsonSerializable(typeof(CredentialsFile))]
+    private partial class CredentialsJsonContext : JsonSerializerContext
+    {
+    }
+
+    /// <summary>
+    /// Saves encrypted credentials to disk with user-only permissions.
+    /// Supports multiple credential types (PIN, passphrase).
+    /// </summary>
+    public static void SaveEncryptedCredentials(Dictionary<string, byte[]> credentials)
+    {
+        if (credentials == null || credentials.Count == 0)
+        {
+            throw new ArgumentException("Credentials cannot be null or empty", nameof(credentials));
+        }
+
+        try
+        {
+            // Ensure storage directory exists
+            Directory.CreateDirectory(StoragePath);
+
+            // Convert byte arrays to base64 for JSON storage
+            var credFile = new CredentialsFile();
+            foreach (var kvp in credentials)
+            {
+                credFile.Credentials[kvp.Key] = Convert.ToBase64String(kvp.Value);
+            }
+
+            // Serialize to JSON using source generator for Native AOT
+            var json = JsonSerializer.Serialize(credFile, CredentialsJsonContext.Default.CredentialsFile);
+
+            // Write to file atomically
+            string tempFile = PassphraseFile + ".tmp";
+            File.WriteAllText(tempFile, json);
+
+            // Set file permissions to current user only (Windows-specific)
+            var fileInfo = new FileInfo(tempFile);
+            var fileSecurity = fileInfo.GetAccessControl();
+            fileSecurity.SetAccessRuleProtection(true, false);
+            var currentUser = WindowsIdentity.GetCurrent();
+            var accessRule = new FileSystemAccessRule(
+                currentUser.User!,
+                FileSystemRights.FullControl,
+                AccessControlType.Allow
+            );
+            fileSecurity.AddAccessRule(accessRule);
+            fileInfo.SetAccessControl(fileSecurity);
+
+            // Atomic move to final location
+            File.Move(tempFile, PassphraseFile, overwrite: true);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new IOException($"Failed to save encrypted credentials due to permission error: {ex.Message}", ex);
+        }
+        catch (IOException ex)
+        {
+            throw new IOException($"Failed to save encrypted credentials: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Legacy method for backwards compatibility with v1 format (single credential).
     /// </summary>
     public static void SaveEncryptedPassphrase(byte[] encryptedData)
     {
@@ -80,7 +159,106 @@ public static class PassphraseStorage
     }
 
     /// <summary>
-    /// Loads an encrypted passphrase from disk and validates version.
+    /// Loads a specific encrypted credential by type (e.g., "pin", "passphrase").
+    /// Supports both v2 (multi-credential JSON) and v1 (legacy single credential) formats.
+    /// </summary>
+    public static byte[]? LoadEncryptedCredential(string credentialType)
+    {
+        if (!File.Exists(PassphraseFile))
+        {
+            throw new FileNotFoundException(
+                $"Encrypted credentials file not found at: {PassphraseFile}\n" +
+                "Run 'gpg-winhello.exe enroll' first to configure Windows Hello encryption."
+            );
+        }
+
+        try
+        {
+            string fileContent = File.ReadAllText(PassphraseFile);
+
+            // Try to parse as JSON (v2 format)
+            if (fileContent.TrimStart().StartsWith("{"))
+            {
+                var credFile = JsonSerializer.Deserialize(fileContent, CredentialsJsonContext.Default.CredentialsFile);
+
+                if (credFile == null || credFile.Version != 2)
+                {
+                    throw new NotSupportedException(
+                        $"Unsupported credentials file version: {credFile?.Version ?? -1}\n" +
+                        "Run 'gpg-winhello.exe enroll' to re-enroll with current version."
+                    );
+                }
+
+                if (!credFile.Credentials.TryGetValue(credentialType, out var base64Data))
+                {
+                    // Credential type not enrolled - return null so caller can handle fallback
+                    return null;
+                }
+
+                return Convert.FromBase64String(base64Data);
+            }
+            else
+            {
+                // Legacy v1 format (binary with version header)
+                // Treat as "passphrase" type for backwards compatibility
+                if (credentialType != "passphrase")
+                {
+                    return null; // v1 only supports passphrase
+                }
+
+                return LoadLegacyV1Format();
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new IOException($"Permission denied reading encrypted credentials file: {ex.Message}", ex);
+        }
+        catch (IOException ex)
+        {
+            throw new IOException($"Failed to load encrypted credentials: {ex.Message}", ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new CryptographicException($"Corrupted credentials file (invalid JSON): {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Legacy loader for v1 format.
+    /// </summary>
+    private static byte[] LoadLegacyV1Format()
+    {
+        byte[] fileData = File.ReadAllBytes(PassphraseFile);
+
+        // Validate minimum file size
+        int minSize = 1 + Constants.Crypto.NonceSize + Constants.Crypto.TagSize + 1;
+        if (fileData.Length < minSize)
+        {
+            throw new CryptographicException(
+                $"Encrypted credentials file is corrupted or too short (expected at least {minSize} bytes, got {fileData.Length})"
+            );
+        }
+
+        // Extract and validate version
+        byte version = fileData[0];
+        if (version != 1)
+        {
+            throw new NotSupportedException(
+                $"Unsupported legacy file version: {version}\n" +
+                "Run 'gpg-winhello.exe enroll' to re-enroll with current version."
+            );
+        }
+
+        // Extract encrypted data (without version header)
+        byte[] encryptedData = new byte[fileData.Length - 1];
+        System.Buffer.BlockCopy(fileData, 1, encryptedData, 0, encryptedData.Length);
+
+        return encryptedData;
+    }
+
+    /// <summary>
+    /// Legacy method for backwards compatibility.
+    /// Loads encrypted passphrase from disk and validates version.
     /// Returns the encrypted data without the version header.
     /// </summary>
     public static byte[]? LoadEncryptedPassphrase()
@@ -111,8 +289,11 @@ public static class PassphraseStorage
             if (version != Constants.Storage.CurrentVersion)
             {
                 throw new NotSupportedException(
-                    $"Unsupported encrypted passphrase file version: {version} (expected {Constants.Storage.CurrentVersion})\n" +
-                    "You may need to run 'gpg-winhello.exe setup' again to re-encrypt with the current version."
+                    $"Encrypted passphrase file version {version} is incompatible with current version {Constants.Storage.CurrentVersion}.\n" +
+                    "This may happen after upgrading gpg-winhello to a new version.\n\n" +
+                    "BACKUP WARNING: Running setup will overwrite the existing encrypted file.\n" +
+                    "If you need the old passphrase, decrypt it with the previous version first.\n\n" +
+                    "To fix: Run 'gpg-winhello.exe setup' to re-encrypt with the current version."
                 );
             }
 

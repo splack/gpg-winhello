@@ -33,6 +33,16 @@ public static class WindowsHelloHelper
     }
 
     /// <summary>
+    /// Checks if a Windows Hello key credential already exists for this application.
+    /// This does not trigger biometric authentication, only checks for existence.
+    /// </summary>
+    public static async Task<bool> KeyExistsAsync()
+    {
+        var openResult = await KeyCredentialManager.OpenAsync(KeyName).AsTask().ConfigureAwait(false);
+        return openResult.Status == KeyCredentialStatus.Success;
+    }
+
+    /// <summary>
     /// Creates a new Windows Hello key credential for this application.
     /// This will prompt the user for biometric authentication.
     /// </summary>

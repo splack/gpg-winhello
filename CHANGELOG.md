@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2025-11-11
+
+### Added
+
+- Informational MessageBox dialog shown before Windows Hello authentication prompt
+- JSON configuration system with auto-creation on first use
+- Configuration file at `%APPDATA%\gpg-winhello\config.json` for customization
+- `InfoDialog.Enabled` config option to show/hide pre-authentication info dialog (default: enabled)
+- `Logging.Enabled` config option to enable/disable credential request logging (default: disabled)
+- `Logging.Path` config option to customize log file location
+- Version command (`--version`, `-v`) showing application and runtime version
+- Help command (`--help`, `-h`, `/?`) with usage information
+- `install` command for automated installation to user directory
+- `config` command for automated GPG agent configuration
+- `CONFIG.md` documentation with configuration examples and troubleshooting
+- Configuration schema versioning for future migrations
+
+### Changed
+
+- Renamed `setup` command to `enroll` for clarity
+- Config loading moved to application startup instead of lazy loading
+- Version number now injected from Nix build (`-p:Version=${version}`)
+- Version constant now reads from assembly metadata instead of hardcoded value
+- Logging disabled by default to avoid clutter (enable for troubleshooting)
+- Info dialog shows GPG description (e.g., "Please unlock the card") with OK/Cancel buttons
+- Improved README with configuration section and updated technical details
+
+### Fixed
+
+- Config file not being auto-created on first run - now creates at startup
+- Missing CONFIRM command implementation for pinentry protocol
+- Outdated README showing AES-CBC instead of correct AES-GCM encryption
+- Outdated storage format documentation (now correctly shows version/nonce/tag/data)
+
+### Removed
+
+- Removed UserConsentVerifier authentication (was causing double authentication)
+- Removed config prompts from enrollment command (config now separate concern)
+
 ## [0.2.0] - 2025-01-08
 
 ### Security
@@ -76,8 +115,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secure storage in `%APPDATA%\gpg-winhello\passphrase.enc`
 - User-only ACL permissions on encrypted passphrase file
 
-[Unreleased]: https://github.com/yourusername/gpg-winhello/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/yourusername/gpg-winhello/compare/v0.1.2...v0.2.0
-[0.1.2]: https://github.com/yourusername/gpg-winhello/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/yourusername/gpg-winhello/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/yourusername/gpg-winhello/releases/tag/v0.1.0
+[Unreleased]: https://github.com/splack/gpg-winhello/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/splack/gpg-winhello/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/splack/gpg-winhello/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/splack/gpg-winhello/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/splack/gpg-winhello/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/splack/gpg-winhello/releases/tag/v0.1.0
