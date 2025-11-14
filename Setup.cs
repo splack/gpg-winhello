@@ -23,17 +23,23 @@ public static class Setup
 
             // Warn if running from a temporary location
             var exePath = Environment.ProcessPath ?? string.Empty;
-            if (exePath.Contains("Downloads", StringComparison.OrdinalIgnoreCase) ||
-                exePath.Contains("Desktop", StringComparison.OrdinalIgnoreCase) ||
-                exePath.Contains("Temp", StringComparison.OrdinalIgnoreCase))
+            if (
+                exePath.Contains("Downloads", StringComparison.OrdinalIgnoreCase)
+                || exePath.Contains("Desktop", StringComparison.OrdinalIgnoreCase)
+                || exePath.Contains("Temp", StringComparison.OrdinalIgnoreCase)
+            )
             {
                 Console.WriteLine("NOTE: Running enrollment from a temporary location.");
                 Console.WriteLine($"Current location: {exePath}");
                 Console.WriteLine("\nFor convenience, consider:");
                 Console.WriteLine("1. Moving gpg-winhello.exe to a permanent location");
                 Console.WriteLine("2. Then running enrollment from there");
-                Console.WriteLine("\nThis way, the displayed path will match your final gpg-agent.conf configuration.");
-                Console.WriteLine("(You can also just move the .exe later and run 'gpg-winhello.exe config' again)");
+                Console.WriteLine(
+                    "\nThis way, the displayed path will match your final gpg-agent.conf configuration."
+                );
+                Console.WriteLine(
+                    "(You can also just move the .exe later and run 'gpg-winhello.exe config' again)"
+                );
                 Console.Write("\nContinue with enrollment? (Y/n): ");
 
                 var response = Console.ReadLine()?.Trim().ToLowerInvariant();
@@ -50,14 +56,24 @@ public static class Setup
             if (osVersion.Platform == PlatformID.Win32NT)
             {
                 // Windows 10 version 1903 is build 18362
-                if (osVersion.Version.Major < 10 ||
-                    (osVersion.Version.Major == 10 && osVersion.Version.Build < 18362))
+                if (
+                    osVersion.Version.Major < 10
+                    || (osVersion.Version.Major == 10 && osVersion.Version.Build < 18362)
+                )
                 {
-                    Console.Error.WriteLine($"ERROR: Windows version {osVersion.Version} is too old.\n");
+                    Console.Error.WriteLine(
+                        $"ERROR: Windows version {osVersion.Version} is too old.\n"
+                    );
                     Console.Error.WriteLine("Windows Hello KeyCredentialManager requires:");
-                    Console.Error.WriteLine("  Windows 10 version 1903 (May 2019 Update, build 18362) or later");
-                    Console.Error.WriteLine($"  Your version: {osVersion.Version} (build {osVersion.Version.Build})");
-                    Console.Error.WriteLine("\nPlease update Windows via Settings > Update & Security > Windows Update");
+                    Console.Error.WriteLine(
+                        "  Windows 10 version 1903 (May 2019 Update, build 18362) or later"
+                    );
+                    Console.Error.WriteLine(
+                        $"  Your version: {osVersion.Version} (build {osVersion.Version.Build})"
+                    );
+                    Console.Error.WriteLine(
+                        "\nPlease update Windows via Settings > Update & Security > Windows Update"
+                    );
                     return 1;
                 }
             }
@@ -67,10 +83,14 @@ public static class Setup
             {
                 Console.Error.WriteLine("ERROR: Windows Hello is not supported on this device.\n");
                 Console.Error.WriteLine("Troubleshooting:");
-                Console.Error.WriteLine("1. Check: Settings > Accounts > Sign-in options > Windows Hello");
+                Console.Error.WriteLine(
+                    "1. Check: Settings > Accounts > Sign-in options > Windows Hello"
+                );
                 Console.Error.WriteLine("2. Verify fingerprint reader is configured and working");
                 Console.Error.WriteLine("3. Ensure TPM 2.0 is enabled in BIOS/UEFI settings");
-                Console.Error.WriteLine("4. Try: Settings > Update & Security > Windows Update (ensure fully updated)");
+                Console.Error.WriteLine(
+                    "4. Try: Settings > Update & Security > Windows Update (ensure fully updated)"
+                );
                 return 1;
             }
 
@@ -90,7 +110,9 @@ public static class Setup
                 Console.WriteLine();
                 Console.WriteLine("YubiKey setup detected. You can enroll:");
                 Console.WriteLine("  1. PIN only (for YubiKey unlock)");
-                Console.WriteLine("  2. PIN + Passphrase (recommended if you have both YubiKey and regular keys)");
+                Console.WriteLine(
+                    "  2. PIN + Passphrase (recommended if you have both YubiKey and regular keys)"
+                );
                 Console.Write("\nEnroll PIN and passphrase? (Y/n): ");
                 var enrollBoth = Console.ReadLine()?.Trim().ToLowerInvariant();
 
@@ -198,7 +220,9 @@ public static class Setup
             PassphraseStorage.SaveEncryptedCredentials(encryptedCredentials);
 
             Console.WriteLine($"\n✓ Enrollment successful!");
-            Console.WriteLine($"  Enrolled credentials: {string.Join(", ", credentialsToEnroll.Select(c => c.ToUpper()))}");
+            Console.WriteLine(
+                $"  Enrolled credentials: {string.Join(", ", credentialsToEnroll.Select(c => c.ToUpper()))}"
+            );
             Console.WriteLine($"  Storage location: {PassphraseStorage.GetStoragePath()}");
             Console.WriteLine($"  Executable location: {exePath}");
             Console.WriteLine($"  Configuration: {AppConfigManager.GetConfigPath()}");
@@ -209,14 +233,18 @@ public static class Setup
             Console.WriteLine($"     pinentry-program {exePath}");
             Console.WriteLine();
             Console.WriteLine("2. Test with: gopass show <entry> or ssh git@github.com");
-            Console.WriteLine("   You should be prompted for Windows Hello fingerprint authentication.");
+            Console.WriteLine(
+                "   You should be prompted for Windows Hello fingerprint authentication."
+            );
             Console.WriteLine();
             Console.WriteLine("Configuration:");
             Console.WriteLine($"  • Edit {AppConfigManager.GetConfigPath()} to customize behavior");
             Console.WriteLine("  • See CONFIG.md for all available options");
             Console.WriteLine();
             Console.WriteLine("Troubleshooting:");
-            Console.WriteLine("  • Check the log file (see config.json for path, default: %APPDATA%\\gpg-winhello\\prompt.log)");
+            Console.WriteLine(
+                "  • Check the log file (see config.json for path, default: %APPDATA%\\gpg-winhello\\prompt.log)"
+            );
             Console.WriteLine("  • Re-run enrollment to add missing credential types");
 
             return 0;
@@ -284,9 +312,12 @@ public static class Setup
     /// </summary>
     private static bool AreEqual(char[]? a, char[]? b)
     {
-        if (a == null && b == null) return true;
-        if (a == null || b == null) return false;
-        if (a.Length != b.Length) return false;
+        if (a == null && b == null)
+            return true;
+        if (a == null || b == null)
+            return false;
+        if (a.Length != b.Length)
+            return false;
 
         int diff = 0;
         for (int i = 0; i < a.Length; i++)

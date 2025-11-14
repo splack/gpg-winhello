@@ -33,7 +33,10 @@ public static class Install
             }
 
             // Check if already running from install location
-            if (Path.GetFullPath(currentPath).Equals(Path.GetFullPath(InstallPath), StringComparison.OrdinalIgnoreCase))
+            if (
+                Path.GetFullPath(currentPath)
+                    .Equals(Path.GetFullPath(InstallPath), StringComparison.OrdinalIgnoreCase)
+            )
             {
                 Console.WriteLine($"Already installed at: {InstallPath}");
                 Console.WriteLine("\nWould you like to enroll your passphrase now? (y/N): ");

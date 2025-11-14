@@ -56,7 +56,10 @@ public static class Config
             var pinentryLine = $"pinentry-program {exePath}";
             var existingPinentryLines = existingLines
                 .Select((line, index) => new { line, index })
-                .Where(x => x.line.TrimStart().StartsWith("pinentry-program", StringComparison.OrdinalIgnoreCase))
+                .Where(x =>
+                    x.line.TrimStart()
+                        .StartsWith("pinentry-program", StringComparison.OrdinalIgnoreCase)
+                )
                 .ToList();
 
             if (existingPinentryLines.Any())
@@ -130,7 +133,9 @@ public static class Config
         }
         catch (UnauthorizedAccessException ex)
         {
-            Console.Error.WriteLine($"ERROR: Permission denied accessing GPG configuration. {ex.Message}");
+            Console.Error.WriteLine(
+                $"ERROR: Permission denied accessing GPG configuration. {ex.Message}"
+            );
             return 1;
         }
         catch (IOException ex)
@@ -172,6 +177,8 @@ public static class Config
         var lines = File.ReadAllLines(GpgAgentConfig);
         var pinentryLine = $"pinentry-program {exePath}";
 
-        return lines.Any(line => line.Trim().Equals(pinentryLine, StringComparison.OrdinalIgnoreCase));
+        return lines.Any(line =>
+            line.Trim().Equals(pinentryLine, StringComparison.OrdinalIgnoreCase)
+        );
     }
 }

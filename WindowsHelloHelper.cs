@@ -38,7 +38,10 @@ public static class WindowsHelloHelper
     /// </summary>
     public static async Task<bool> KeyExistsAsync()
     {
-        var openResult = await KeyCredentialManager.OpenAsync(KeyName).AsTask().ConfigureAwait(false);
+        var openResult = await KeyCredentialManager
+            .OpenAsync(KeyName)
+            .AsTask()
+            .ConfigureAwait(false);
         return openResult.Status == KeyCredentialStatus.Success;
     }
 
@@ -48,10 +51,10 @@ public static class WindowsHelloHelper
     /// </summary>
     public static async Task<bool> CreateKeyAsync()
     {
-        var result = await KeyCredentialManager.RequestCreateAsync(
-            KeyName,
-            KeyCredentialCreationOption.ReplaceExisting
-        ).AsTask().ConfigureAwait(false);
+        var result = await KeyCredentialManager
+            .RequestCreateAsync(KeyName, KeyCredentialCreationOption.ReplaceExisting)
+            .AsTask()
+            .ConfigureAwait(false);
 
         return result.Status == KeyCredentialStatus.Success;
     }
@@ -68,11 +71,16 @@ public static class WindowsHelloHelper
 
         try
         {
-            var openResult = await KeyCredentialManager.OpenAsync(KeyName).AsTask().ConfigureAwait(false);
+            var openResult = await KeyCredentialManager
+                .OpenAsync(KeyName)
+                .AsTask()
+                .ConfigureAwait(false);
 
             if (openResult.Status != KeyCredentialStatus.Success)
             {
-                throw new InvalidOperationException($"Failed to open Windows Hello key: {openResult.Status}");
+                throw new InvalidOperationException(
+                    $"Failed to open Windows Hello key: {openResult.Status}"
+                );
             }
 
             var challengeBuffer = CryptographicBuffer.ConvertStringToBinary(
@@ -80,11 +88,16 @@ public static class WindowsHelloHelper
                 BinaryStringEncoding.Utf8
             );
 
-            var signResult = await openResult.Credential.RequestSignAsync(challengeBuffer).AsTask().ConfigureAwait(false);
+            var signResult = await openResult
+                .Credential.RequestSignAsync(challengeBuffer)
+                .AsTask()
+                .ConfigureAwait(false);
 
             if (signResult.Status != KeyCredentialStatus.Success)
             {
-                throw new InvalidOperationException($"Failed to sign challenge: {signResult.Status}");
+                throw new InvalidOperationException(
+                    $"Failed to sign challenge: {signResult.Status}"
+                );
             }
 
             // Convert signature to byte array
@@ -97,7 +110,9 @@ public static class WindowsHelloHelper
             // Validate key size
             if (keyBytes.Length != Constants.Crypto.KeySize)
             {
-                throw new CryptographicException($"Expected {Constants.Crypto.KeySize} byte key, got {keyBytes.Length}");
+                throw new CryptographicException(
+                    $"Expected {Constants.Crypto.KeySize} byte key, got {keyBytes.Length}"
+                );
             }
 
             return keyBytes;
@@ -105,20 +120,26 @@ public static class WindowsHelloHelper
         catch (CryptographicException)
         {
             // Clear and rethrow cryptographic errors
-            if (keyBytes != null) Array.Clear(keyBytes, 0, keyBytes.Length);
+            if (keyBytes != null)
+                Array.Clear(keyBytes, 0, keyBytes.Length);
             throw;
         }
         catch (InvalidOperationException)
         {
             // Clear and rethrow Windows Hello errors
-            if (keyBytes != null) Array.Clear(keyBytes, 0, keyBytes.Length);
+            if (keyBytes != null)
+                Array.Clear(keyBytes, 0, keyBytes.Length);
             throw;
         }
         catch (Exception ex)
         {
             // Clear and wrap unexpected errors
-            if (keyBytes != null) Array.Clear(keyBytes, 0, keyBytes.Length);
-            throw new InvalidOperationException($"Unexpected error getting encryption key: {ex.Message}", ex);
+            if (keyBytes != null)
+                Array.Clear(keyBytes, 0, keyBytes.Length);
+            throw new InvalidOperationException(
+                $"Unexpected error getting encryption key: {ex.Message}",
+                ex
+            );
         }
         finally
         {
@@ -144,7 +165,10 @@ public static class WindowsHelloHelper
 
         if (key == null || key.Length != Constants.Crypto.KeySize)
         {
-            throw new ArgumentException($"Key must be {Constants.Crypto.KeySize} bytes", nameof(key));
+            throw new ArgumentException(
+                $"Key must be {Constants.Crypto.KeySize} bytes",
+                nameof(key)
+            );
         }
 
         byte[]? passphraseBytes = null;
@@ -170,20 +194,38 @@ public static class WindowsHelloHelper
             aesGcm.Encrypt(nonce, passphraseBytes, ciphertext, tag);
 
             // Combine: nonce + tag + ciphertext
-            var result = new byte[Constants.Crypto.NonceSize + Constants.Crypto.TagSize + ciphertext.Length];
+            var result = new byte[
+                Constants.Crypto.NonceSize + Constants.Crypto.TagSize + ciphertext.Length
+            ];
             System.Buffer.BlockCopy(nonce, 0, result, 0, Constants.Crypto.NonceSize);
-            System.Buffer.BlockCopy(tag, 0, result, Constants.Crypto.NonceSize, Constants.Crypto.TagSize);
-            System.Buffer.BlockCopy(ciphertext, 0, result, Constants.Crypto.NonceSize + Constants.Crypto.TagSize, ciphertext.Length);
+            System.Buffer.BlockCopy(
+                tag,
+                0,
+                result,
+                Constants.Crypto.NonceSize,
+                Constants.Crypto.TagSize
+            );
+            System.Buffer.BlockCopy(
+                ciphertext,
+                0,
+                result,
+                Constants.Crypto.NonceSize + Constants.Crypto.TagSize,
+                ciphertext.Length
+            );
 
             return result;
         }
         finally
         {
             // Always clear sensitive data
-            if (passphraseBytes != null) Array.Clear(passphraseBytes, 0, passphraseBytes.Length);
-            if (nonce != null) Array.Clear(nonce, 0, nonce.Length);
-            if (tag != null) Array.Clear(tag, 0, tag.Length);
-            if (ciphertext != null) Array.Clear(ciphertext, 0, ciphertext.Length);
+            if (passphraseBytes != null)
+                Array.Clear(passphraseBytes, 0, passphraseBytes.Length);
+            if (nonce != null)
+                Array.Clear(nonce, 0, nonce.Length);
+            if (tag != null)
+                Array.Clear(tag, 0, tag.Length);
+            if (ciphertext != null)
+                Array.Clear(ciphertext, 0, ciphertext.Length);
         }
     }
 
@@ -201,14 +243,19 @@ public static class WindowsHelloHelper
 
         if (key == null || key.Length != Constants.Crypto.KeySize)
         {
-            throw new ArgumentException($"Key must be {Constants.Crypto.KeySize} bytes", nameof(key));
+            throw new ArgumentException(
+                $"Key must be {Constants.Crypto.KeySize} bytes",
+                nameof(key)
+            );
         }
 
         // Validate minimum data length: nonce + tag + at least 1 byte ciphertext
         int minLength = Constants.Crypto.NonceSize + Constants.Crypto.TagSize + 1;
         if (encryptedData.Length < minLength)
         {
-            throw new CryptographicException($"Encrypted data too short (minimum {minLength} bytes, got {encryptedData.Length})");
+            throw new CryptographicException(
+                $"Encrypted data too short (minimum {minLength} bytes, got {encryptedData.Length})"
+            );
         }
 
         byte[]? nonce = null;
@@ -221,12 +268,25 @@ public static class WindowsHelloHelper
             // Extract components: nonce + tag + ciphertext
             nonce = new byte[Constants.Crypto.NonceSize];
             tag = new byte[Constants.Crypto.TagSize];
-            int ciphertextLength = encryptedData.Length - Constants.Crypto.NonceSize - Constants.Crypto.TagSize;
+            int ciphertextLength =
+                encryptedData.Length - Constants.Crypto.NonceSize - Constants.Crypto.TagSize;
             ciphertext = new byte[ciphertextLength];
 
             System.Buffer.BlockCopy(encryptedData, 0, nonce, 0, Constants.Crypto.NonceSize);
-            System.Buffer.BlockCopy(encryptedData, Constants.Crypto.NonceSize, tag, 0, Constants.Crypto.TagSize);
-            System.Buffer.BlockCopy(encryptedData, Constants.Crypto.NonceSize + Constants.Crypto.TagSize, ciphertext, 0, ciphertextLength);
+            System.Buffer.BlockCopy(
+                encryptedData,
+                Constants.Crypto.NonceSize,
+                tag,
+                0,
+                Constants.Crypto.TagSize
+            );
+            System.Buffer.BlockCopy(
+                encryptedData,
+                Constants.Crypto.NonceSize + Constants.Crypto.TagSize,
+                ciphertext,
+                0,
+                ciphertextLength
+            );
 
             // Decrypt using AES-GCM
             decryptedBytes = new byte[ciphertextLength];
@@ -250,15 +310,22 @@ public static class WindowsHelloHelper
         catch (CryptographicException ex)
         {
             // Authentication failed or decryption error - use generic message to avoid leaking info
-            throw new CryptographicException("Authentication failed - passphrase could not be decrypted", ex);
+            throw new CryptographicException(
+                "Authentication failed - passphrase could not be decrypted",
+                ex
+            );
         }
         finally
         {
             // Always clear sensitive data
-            if (nonce != null) Array.Clear(nonce, 0, nonce.Length);
-            if (tag != null) Array.Clear(tag, 0, tag.Length);
-            if (ciphertext != null) Array.Clear(ciphertext, 0, ciphertext.Length);
-            if (decryptedBytes != null) Array.Clear(decryptedBytes, 0, decryptedBytes.Length);
+            if (nonce != null)
+                Array.Clear(nonce, 0, nonce.Length);
+            if (tag != null)
+                Array.Clear(tag, 0, tag.Length);
+            if (ciphertext != null)
+                Array.Clear(ciphertext, 0, ciphertext.Length);
+            if (decryptedBytes != null)
+                Array.Clear(decryptedBytes, 0, decryptedBytes.Length);
         }
     }
 

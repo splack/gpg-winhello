@@ -69,9 +69,7 @@ public static partial class AppConfigManager
     /// </summary>
     [JsonSourceGenerationOptions(WriteIndented = true)]
     [JsonSerializable(typeof(AppConfig))]
-    private partial class AppConfigJsonContext : JsonSerializerContext
-    {
-    }
+    private partial class AppConfigJsonContext : JsonSerializerContext { }
 
     /// <summary>
     /// Loads configuration from disk. If file doesn't exist, creates it with defaults.
@@ -91,11 +89,15 @@ public static partial class AppConfigManager
             try
             {
                 string json = File.ReadAllText(ConfigPath);
-                config = JsonSerializer.Deserialize(json, AppConfigJsonContext.Default.AppConfig) ?? new AppConfig();
+                config =
+                    JsonSerializer.Deserialize(json, AppConfigJsonContext.Default.AppConfig)
+                    ?? new AppConfig();
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"WARN: Failed to load config from {ConfigPath}: {ex.Message}. Using defaults.");
+                Console.Error.WriteLine(
+                    $"WARN: Failed to load config from {ConfigPath}: {ex.Message}. Using defaults."
+                );
                 config = new AppConfig();
                 shouldSave = true;
             }
@@ -121,7 +123,9 @@ public static partial class AppConfigManager
             catch (Exception ex)
             {
                 // Best effort - don't fail if we can't save config
-                Console.Error.WriteLine($"WARN: Failed to create default config file: {ex.Message} <AppConfig>");
+                Console.Error.WriteLine(
+                    $"WARN: Failed to create default config file: {ex.Message} <AppConfig>"
+                );
             }
         }
 

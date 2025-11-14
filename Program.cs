@@ -27,7 +27,7 @@ class Program
                     "config" => await Config.RunAsync().ConfigureAwait(false),
                     "version" or "--version" or "-v" => ShowVersion(),
                     "help" or "--help" or "-h" or "/?" => ShowHelp(),
-                    _ => await Pinentry.RunAsync().ConfigureAwait(false)
+                    _ => await Pinentry.RunAsync().ConfigureAwait(false),
                 };
             }
             else
@@ -65,7 +65,9 @@ class Program
         Console.WriteLine("Typical workflow:");
         Console.WriteLine("  1. gpg-winhello.exe install   # Copy to permanent location");
         Console.WriteLine("  2. gpg-winhello.exe enroll    # Enroll passphrase with Windows Hello");
-        Console.WriteLine("  3. gpg-winhello.exe config    # Configure GPG agent (or edit manually)");
+        Console.WriteLine(
+            "  3. gpg-winhello.exe config    # Configure GPG agent (or edit manually)"
+        );
         Console.WriteLine();
         Console.WriteLine("For more information, see: https://github.com/splack/gpg-winhello");
         return 0;
