@@ -11,7 +11,8 @@ Unlock your GPG SSH agent using Windows Hello fingerprint authentication.
 
 ## How It Works
 
-1. **Enrollment**: Encrypts your GPG passphrase using Windows Hello (RSA-2048 + TPM)
+1. **Enrollment**: Encrypts your GPG passphrase using Windows Hello (RSA-2048 +
+   TPM)
 2. **Usage**: Each SSH/GPG operation triggers fingerprint scan to decrypt
    passphrase
 3. **Security**: Private key never leaves TPM; passphrase encrypted at rest
@@ -23,6 +24,9 @@ Unlock your GPG SSH agent using Windows Hello fingerprint authentication.
 - Fingerprint reader configured in Windows Hello
 
 ## Installation
+
+**Version:** See [CHANGELOG.md](CHANGELOG.md) for the latest version, or run
+`gpg-winhello.exe --version`.
 
 See [Building](#building) for how to build the executable.
 
@@ -36,12 +40,8 @@ Run these three commands:
 .\gpg-winhello.exe config     # Configure GPG agent
 ```
 
-Or use the automated workflow:
-
-```powershell
-.\gpg-winhello.exe install
-# Follow prompts to enroll and configure
-```
+The `install` command will prompt you to run `enroll` and `config` after copying
+the executable.
 
 ### Manual Installation (Alternative)
 
@@ -84,22 +84,29 @@ Try using SSH with your GPG authentication key:
 ssh git@github.com
 ```
 
-You'll see an info dialog showing what credential is being requested, then Windows Hello fingerprint authentication will be triggered.
+You'll see an info dialog showing what credential is being requested, then
+Windows Hello fingerprint authentication will be triggered.
 
-**Note**: You can disable the info dialog in the config if you prefer to go straight to Windows Hello.
+**Note**: You can disable the info dialog in the config if you prefer to go
+straight to Windows Hello.
 
 ## Configuration
 
-gpg-winhello is configured via a JSON file at `%APPDATA%\gpg-winhello\config.json`.
+gpg-winhello is configured via a JSON file at
+`%APPDATA%\gpg-winhello\config.json`.
 
 **Configuration options:**
-- **Info Dialog**: Show informational dialog before Windows Hello prompt (default: enabled)
+
+- **Info Dialog**: Show informational dialog before Windows Hello prompt
+  (default: enabled)
 - **Logging**: Log credential requests for troubleshooting (default: disabled)
-- **Log Path**: Customize log file location (default: `%APPDATA%\gpg-winhello\prompt.log`)
+- **Log Path**: Customize log file location (default:
+  `%APPDATA%\gpg-winhello\prompt.log`)
 
 **See [CONFIG.md](CONFIG.md) for complete documentation and examples.**
 
 Quick example - disable info dialog:
+
 ```json
 {
   "Version": 1,
@@ -186,7 +193,8 @@ debug-level advanced
 Currently supports only one GPG key passphrase. If you have multiple GPG keys:
 
 - **Recommended**: Use the same passphrase for all keys
-- **Not currently supported**: Different passphrases per key (would require source code modifications)
+- **Not currently supported**: Different passphrases per key (would require
+  source code modifications)
 
 ## Technical Details
 
@@ -200,7 +208,16 @@ Currently supports only one GPG key passphrase. If you have multiple GPG keys:
 ### Storage
 
 - **Location**: `%APPDATA%\gpg-winhello\passphrase.enc`
-- **Format**: [1 byte version][12 bytes nonce][16 bytes tag][encrypted data]
+- **Format**: JSON with versioned credential storage
+  ```json
+  {
+    "Version": 2,
+    "Credentials": {
+      "passphrase": "base64-encoded-encrypted-data"
+    }
+  }
+  ```
+- **Encrypted data format**: [12 bytes nonce][16 bytes tag][encrypted data]
 - **Permissions**: User-only access (Windows ACLs)
 - **Security**: Authentication tag prevents tampering and padding oracle attacks
 
@@ -256,7 +273,7 @@ Enter a development environment with all tools:
 
 ```bash
 nix develop
-# Provides: dotnet SDK 9.0, csharp-ls, direnv, nixfmt
+# Provides: dotnet SDK 9.0, csharp-ls, direnv
 ```
 
 ### Testing

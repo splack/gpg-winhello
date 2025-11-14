@@ -3,19 +3,41 @@
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+### Changed
+
+- Storage format now uses JSON exclusively (Version 2 multi-credential format)
+- Formatter switched from `dotnet format` to CSharpier for better Nix compatibility
+
+### Removed
+
+- Legacy v1 binary storage format support (was unreleased)
+- `SaveEncryptedPassphrase()`, `LoadEncryptedPassphrase()`, and `LoadLegacyV1Format()` methods
+- `Constants.Storage.CurrentVersion` constant
+
+### Fixed
+
+- README storage format documentation now accurately shows JSON format
+- README installation instructions clarified (removed misleading "automated workflow" claim)
+- README devShell packages list corrected (removed nixfmt)
+- Added version reference in README pointing to CHANGELOG and `--version` command
 
 ## [0.2.1] - 2025-11-11
 
 ### Added
 
-- Informational MessageBox dialog shown before Windows Hello authentication prompt
+- Informational MessageBox dialog shown before Windows Hello authentication
+  prompt
 - JSON configuration system with auto-creation on first use
 - Configuration file at `%APPDATA%\gpg-winhello\config.json` for customization
-- `InfoDialog.Enabled` config option to show/hide pre-authentication info dialog (default: enabled)
-- `Logging.Enabled` config option to enable/disable credential request logging (default: disabled)
+- `InfoDialog.Enabled` config option to show/hide pre-authentication info dialog
+  (default: enabled)
+- `Logging.Enabled` config option to enable/disable credential request logging
+  (default: disabled)
 - `Logging.Path` config option to customize log file location
 - Version command (`--version`, `-v`) showing application and runtime version
 - Help command (`--help`, `-h`, `/?`) with usage information
@@ -31,7 +53,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Version number now injected from Nix build (`-p:Version=${version}`)
 - Version constant now reads from assembly metadata instead of hardcoded value
 - Logging disabled by default to avoid clutter (enable for troubleshooting)
-- Info dialog shows GPG description (e.g., "Please unlock the card") with OK/Cancel buttons
+- Info dialog shows GPG description (e.g., "Please unlock the card") with
+  OK/Cancel buttons
 - Improved README with configuration section and updated technical details
 
 ### Fixed
@@ -39,7 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Config file not being auto-created on first run - now creates at startup
 - Missing CONFIRM command implementation for pinentry protocol
 - Outdated README showing AES-CBC instead of correct AES-GCM encryption
-- Outdated storage format documentation (now correctly shows version/nonce/tag/data)
+- Outdated storage format documentation (now correctly shows
+  version/nonce/tag/data)
 
 ### Removed
 
@@ -50,26 +74,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- **CRITICAL**: Replaced AES-CBC with AES-256-GCM authenticated encryption to prevent padding oracle attacks and ciphertext tampering
-- **CRITICAL**: Implemented explicit memory clearing for passphrases and encryption keys to prevent memory dump attacks
-- **CRITICAL**: Added comprehensive input validation for encrypted data to prevent crashes and vulnerabilities
-- Added version header to encrypted passphrase file format for future-proof format changes
+- **CRITICAL**: Replaced AES-CBC with AES-256-GCM authenticated encryption to
+  prevent padding oracle attacks and ciphertext tampering
+- **CRITICAL**: Implemented explicit memory clearing for passphrases and
+  encryption keys to prevent memory dump attacks
+- **CRITICAL**: Added comprehensive input validation for encrypted data to
+  prevent crashes and vulnerabilities
+- Added version header to encrypted passphrase file format for future-proof
+  format changes
 - Implemented constant-time passphrase comparison to prevent timing attacks
 - Added UTF-8 validation for decrypted passphrases
 - Generic error messages to avoid information leakage to attackers
 
 ### Changed
 
-- Passphrases now stored in `char[]` instead of immutable `string` objects for secure memory clearing
-- Encrypted file format changed to: `[1 byte version][12 bytes nonce][16 bytes tag][encrypted data]`
-- Improved error handling with specific exception types (`CryptographicException`, `InvalidOperationException`, `IOException`)
-- Replaced LINQ array operations with `System.Buffer.BlockCopy()` for better performance
+- Passphrases now stored in `char[]` instead of immutable `string` objects for
+  secure memory clearing
+- Encrypted file format changed to:
+  `[1 byte version][12 bytes nonce][16 bytes tag][encrypted data]`
+- Improved error handling with specific exception types
+  (`CryptographicException`, `InvalidOperationException`, `IOException`)
+- Replaced LINQ array operations with `System.Buffer.BlockCopy()` for better
+  performance
 - Atomic file writes using temporary file then move for `passphrase.enc`
-- Added `ConfigureAwait(false)` to all async calls for better async/await performance
+- Added `ConfigureAwait(false)` to all async calls for better async/await
+  performance
 
 ### Added
 
-- `Constants.cs` with centralized error codes, crypto constants, and storage version
+- `Constants.cs` with centralized error codes, crypto constants, and storage
+  version
 - Comprehensive XML documentation comments for all public methods
 - Detailed security model documentation in code comments
 - Version validation when loading encrypted passphrase files
@@ -78,7 +112,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Buffer ambiguity between `Windows.Storage.Streams.Buffer` and `System.Buffer`
-- Windows Runtime async operations now use `.AsTask().ConfigureAwait(false)` pattern
+- Windows Runtime async operations now use `.AsTask().ConfigureAwait(false)`
+  pattern
 - Missing validation for minimum encrypted data length
 
 ## [0.1.2] - 2024-01-XX

@@ -49,16 +49,4 @@ public static class Constants
         /// </summary>
         public const int KeySize = 32;
     }
-
-    /// <summary>
-    /// Storage format constants.
-    /// </summary>
-    public static class Storage
-    {
-        /// <summary>
-        /// Current version of the encrypted passphrase file format.
-        /// Version 1: [1 byte version][12 bytes nonce][16 bytes tag][encrypted data]
-        /// </summary>
-        public const byte CurrentVersion = 1;
-    }
 }

@@ -87,33 +87,41 @@ public static class Pinentry
 
                 if (command.StartsWith("GETPIN"))
                 {
-                    Console.Error.WriteLine($"INFO: Received GETPIN command (lastDescription={_lastDescription ?? "null"}) <Pinentry>");
+                    Console.Error.WriteLine(
+                        $"INFO: Received GETPIN command (lastDescription={_lastDescription ?? "null"}) <Pinentry>"
+                    );
                     await HandleGetPinAsync(_lastDescription).ConfigureAwait(false);
                 }
                 else if (command.StartsWith("SETDESC "))
                 {
                     // Capture the description GPG is sending about what it wants
                     _lastDescription = command.Substring("SETDESC ".Length);
-                    Console.Error.WriteLine($"INFO: Received SETDESC: {_lastDescription} <Pinentry>");
+                    Console.Error.WriteLine(
+                        $"INFO: Received SETDESC: {_lastDescription} <Pinentry>"
+                    );
                     Console.WriteLine("OK");
                     Console.Out.Flush();
                 }
                 else if (command == "CONFIRM")
                 {
                     // Show message box and wait for user response
-                    Console.Error.WriteLine($"INFO: Received CONFIRM command (description={_lastDescription ?? "none"}) <Pinentry>");
+                    Console.Error.WriteLine(
+                        $"INFO: Received CONFIRM command (description={_lastDescription ?? "none"}) <Pinentry>"
+                    );
                     HandleConfirm(_lastDescription);
                 }
-                else if (command.StartsWith("SETPROMPT") ||
-                         command.StartsWith("SETERROR") ||
-                         command.StartsWith("SETOK") ||
-                         command.StartsWith("SETCANCEL") ||
-                         command.StartsWith("SETNOTOK") ||
-                         command.StartsWith("SETTITLE") ||
-                         command.StartsWith("SETQUALITYBAR") ||
-                         command.StartsWith("SETREPEATERROR") ||
-                         command.StartsWith("SETREPEAT") ||
-                         command.StartsWith("OPTION"))
+                else if (
+                    command.StartsWith("SETPROMPT")
+                    || command.StartsWith("SETERROR")
+                    || command.StartsWith("SETOK")
+                    || command.StartsWith("SETCANCEL")
+                    || command.StartsWith("SETNOTOK")
+                    || command.StartsWith("SETTITLE")
+                    || command.StartsWith("SETQUALITYBAR")
+                    || command.StartsWith("SETREPEATERROR")
+                    || command.StartsWith("SETREPEAT")
+                    || command.StartsWith("OPTION")
+                )
                 {
                     // Acknowledge commands we don't need to act on
                     Console.WriteLine("OK");
@@ -163,7 +171,12 @@ public static class Pinentry
             Console.Error.WriteLine($"INFO: Showing confirmation dialog: {message} <Pinentry>");
 
             // Show message box with OK/Cancel
-            int result = MessageBox(IntPtr.Zero, message, "GPG Windows Hello", MB_OKCANCEL | MB_ICONINFORMATION);
+            int result = MessageBox(
+                IntPtr.Zero,
+                message,
+                "GPG Windows Hello",
+                MB_OKCANCEL | MB_ICONINFORMATION
+            );
 
             if (result == IDOK)
             {
@@ -181,7 +194,9 @@ public static class Pinentry
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"ERR: Failed to show confirmation dialog: {ex.Message} <Pinentry>");
+            Console.Error.WriteLine(
+                $"ERR: Failed to show confirmation dialog: {ex.Message} <Pinentry>"
+            );
             Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Dialog error");
             Console.Out.Flush();
         }
@@ -191,7 +206,9 @@ public static class Pinentry
     {
         if (string.IsNullOrEmpty(description))
         {
-            Console.Error.WriteLine("ERROR: No description provided by GPG - cannot determine credential type <Pinentry>");
+            Console.Error.WriteLine(
+                "ERROR: No description provided by GPG - cannot determine credential type <Pinentry>"
+            );
             return null;
         }
 
@@ -206,14 +223,15 @@ public static class Pinentry
 
         // Exact passphrase patterns from GPG
         // Pattern: "Please enter the passphrase" or mentions "secret key"
-        if (desc.StartsWith("please enter the passphrase") ||
-            desc.Contains("secret key"))
+        if (desc.StartsWith("please enter the passphrase") || desc.Contains("secret key"))
         {
             return "passphrase";
         }
 
         // No match - return null to trigger error dialog
-        Console.Error.WriteLine($"ERROR: Unknown credential request pattern. Description: {desc} <Pinentry>");
+        Console.Error.WriteLine(
+            $"ERROR: Unknown credential request pattern. Description: {desc} <Pinentry>"
+        );
         return null;
     }
 
@@ -235,16 +253,21 @@ public static class Pinentry
                     ? "(no description provided)"
                     : Uri.UnescapeDataString(description);
 
-                var errorMsg = $"Unknown credential request from GPG.\n\n" +
-                              $"Description received:\n{decodedDesc}\n\n" +
-                              $"This pattern is not recognized. Please report this at:\n" +
-                              $"https://github.com/splack/gpg-winhello/issues\n\n" +
-                              $"Log file: %APPDATA%\\gpg-winhello\\prompt.log";
+                var errorMsg =
+                    $"Unknown credential request from GPG.\n\n"
+                    + $"Description received:\n{decodedDesc}\n\n"
+                    + $"This pattern is not recognized. Please report this at:\n"
+                    + $"https://github.com/splack/gpg-winhello/issues\n\n"
+                    + $"Log file: %APPDATA%\\gpg-winhello\\prompt.log";
 
                 ShowErrorDialog(errorMsg);
 
-                Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Unknown credential type <Pinentry>");
-                Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Unknown credential request pattern");
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} Unknown credential type <Pinentry>"
+                );
+                Console.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} Unknown credential request pattern"
+                );
                 Console.Out.Flush();
                 return;
             }
@@ -252,12 +275,16 @@ public static class Pinentry
             // Log to file for debugging
             LogPromptRequest(credentialType, description);
 
-            Console.Error.WriteLine($"INFO: GPG requesting '{credentialType}' (description: {description ?? "none"}) <Pinentry>");
+            Console.Error.WriteLine(
+                $"INFO: GPG requesting '{credentialType}' (description: {description ?? "none"}) <Pinentry>"
+            );
 
             // Check if configured
             if (!PassphraseStorage.IsConfigured())
             {
-                Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Not configured <Pinentry>");
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} Not configured <Pinentry>"
+                );
                 Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Not configured");
                 Console.Out.Flush();
                 return;
@@ -272,13 +299,19 @@ public static class Pinentry
                 if (encryptedData == null)
                 {
                     // Credential type not enrolled - try fallback to passphrase
-                    Console.Error.WriteLine($"WARN: Credential type '{credentialType}' not enrolled, trying 'passphrase' fallback <Pinentry>");
+                    Console.Error.WriteLine(
+                        $"WARN: Credential type '{credentialType}' not enrolled, trying 'passphrase' fallback <Pinentry>"
+                    );
                     encryptedData = PassphraseStorage.LoadEncryptedCredential("passphrase");
 
                     if (encryptedData == null)
                     {
-                        Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} No credentials enrolled <Pinentry>");
-                        Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Credential not enrolled - run 'gpg-winhello.exe enroll'");
+                        Console.Error.WriteLine(
+                            $"ERR {Constants.AssuanErrors.GeneralError} No credentials enrolled <Pinentry>"
+                        );
+                        Console.WriteLine(
+                            $"ERR {Constants.AssuanErrors.GeneralError} Credential not enrolled - run 'gpg-winhello.exe enroll'"
+                        );
                         Console.Out.Flush();
                         return;
                     }
@@ -286,23 +319,35 @@ public static class Pinentry
             }
             catch (FileNotFoundException ex)
             {
-                Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>");
-                Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Configuration not found");
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>"
+                );
+                Console.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} Configuration not found"
+                );
                 Console.Out.Flush();
                 return;
             }
             catch (NotSupportedException ex)
             {
                 // Version mismatch
-                Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>");
-                Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Version mismatch - run setup again");
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>"
+                );
+                Console.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} Version mismatch - run enroll again"
+                );
                 Console.Out.Flush();
                 return;
             }
             catch (CryptographicException ex)
             {
-                Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>");
-                Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Corrupted passphrase file");
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>"
+                );
+                Console.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} Corrupted passphrase file"
+                );
                 Console.Out.Flush();
                 return;
             }
@@ -319,7 +364,12 @@ public static class Pinentry
 
                 Console.Error.WriteLine($"INFO: Showing info dialog: {infoMessage} <Pinentry>");
 
-                int result = MessageBox(IntPtr.Zero, infoMessage, "GPG Windows Hello", MB_OKCANCEL | MB_ICONINFORMATION);
+                int result = MessageBox(
+                    IntPtr.Zero,
+                    infoMessage,
+                    "GPG Windows Hello",
+                    MB_OKCANCEL | MB_ICONINFORMATION
+                );
 
                 if (result == IDCANCEL)
                 {
@@ -329,16 +379,22 @@ public static class Pinentry
                     return;
                 }
 
-                Console.Error.WriteLine("INFO: User clicked OK on info dialog, proceeding to Windows Hello <Pinentry>");
+                Console.Error.WriteLine(
+                    "INFO: User clicked OK on info dialog, proceeding to Windows Hello <Pinentry>"
+                );
             }
 
             // Get decryption key from Windows Hello (triggers biometric auth)
             try
             {
-                encryptionKey = await WindowsHelloHelper.GetEncryptionKeyAsync().ConfigureAwait(false);
+                encryptionKey = await WindowsHelloHelper
+                    .GetEncryptionKeyAsync()
+                    .ConfigureAwait(false);
                 if (encryptionKey == null)
                 {
-                    Console.Error.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} Authentication cancelled <Pinentry>");
+                    Console.Error.WriteLine(
+                        $"ERR {Constants.AssuanErrors.Cancelled} Authentication cancelled <Pinentry>"
+                    );
                     Console.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} Cancelled");
                     Console.Out.Flush();
                     return;
@@ -347,7 +403,9 @@ public static class Pinentry
             catch (InvalidOperationException ex)
             {
                 // Windows Hello failed
-                Console.Error.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} {ex.Message} <Pinentry>");
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.Cancelled} {ex.Message} <Pinentry>"
+                );
                 Console.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} Authentication failed");
                 Console.Out.Flush();
                 return;
@@ -359,8 +417,12 @@ public static class Pinentry
                 passphrase = WindowsHelloHelper.DecryptPassphrase(encryptedData, encryptionKey);
                 if (passphrase == null || passphrase.Length == 0)
                 {
-                    Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Decryption returned empty result <Pinentry>");
-                    Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Authentication failed");
+                    Console.Error.WriteLine(
+                        $"ERR {Constants.AssuanErrors.GeneralError} Decryption returned empty result <Pinentry>"
+                    );
+                    Console.WriteLine(
+                        $"ERR {Constants.AssuanErrors.GeneralError} Authentication failed"
+                    );
                     Console.Out.Flush();
                     return;
                 }
@@ -368,8 +430,12 @@ public static class Pinentry
             catch (CryptographicException ex)
             {
                 // Decryption or authentication failed - use generic message
-                Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>");
-                Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Authentication failed");
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} {ex.Message} <Pinentry>"
+                );
+                Console.WriteLine(
+                    $"ERR {Constants.AssuanErrors.GeneralError} Authentication failed"
+                );
                 Console.Out.Flush();
                 return;
             }
@@ -384,13 +450,17 @@ public static class Pinentry
         }
         catch (IOException ex)
         {
-            Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} I/O error: {ex.Message} <Pinentry>");
+            Console.Error.WriteLine(
+                $"ERR {Constants.AssuanErrors.GeneralError} I/O error: {ex.Message} <Pinentry>"
+            );
             Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} File access error");
             Console.Out.Flush();
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Unexpected error: {ex.Message} <Pinentry>");
+            Console.Error.WriteLine(
+                $"ERR {Constants.AssuanErrors.GeneralError} Unexpected error: {ex.Message} <Pinentry>"
+            );
             Console.WriteLine($"ERR {Constants.AssuanErrors.GeneralError} Internal error");
             Console.Out.Flush();
         }
