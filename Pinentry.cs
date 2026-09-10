@@ -49,6 +49,14 @@ public static class Pinentry
             }
 
             var logPath = config.Logging.Path;
+            if (string.IsNullOrEmpty(logPath))
+            {
+                Console.Error.WriteLine(
+                    "WARN: Logging is enabled but no log path is configured <Pinentry>"
+                );
+                return;
+            }
+
             var logDir = Path.GetDirectoryName(logPath);
             if (!string.IsNullOrEmpty(logDir))
             {
