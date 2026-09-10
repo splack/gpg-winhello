@@ -14,22 +14,29 @@ public static class Pinentry
 {
     private static string? _lastDescription = null;
 
-    // MessageBox constants
-    private const int MB_OK = 0x00000000;
-    private const int MB_ICONINFORMATION = 0x00000040;
-    private const int MB_OKCANCEL = 0x00000001;
-    private const int IDOK = 1;
-    private const int IDCANCEL = 2;
+    /// <summary>
+    /// Credential used when GPG sends a description we do not recognise.
+    /// Guessing wrong costs one failed unlock; stalling wedges gpg-agent.
+    /// </summary>
+    private const string FallbackCredentialType = "passphrase";
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
-
+    /// <summary>
+    /// Shows an advisory error dialog WITHOUT blocking.
+    ///
+    /// gpg-agent must always be given its reply first. A modal dialog raised from a
+    /// pinentry is frequently invisible or unfocusable, and blocking on one wedges
+    /// the agent - and every GPG/SSH operation behind it - until it is reloaded.
+    /// </summary>
     private static void ShowErrorDialog(string message)
     {
-        MessageBox(IntPtr.Zero, message, "GPG Windows Hello - Error", MB_OK | MB_ICONINFORMATION);
+        DialogHelper.ShowNonBlocking(
+            message,
+            "GPG Windows Hello - Error",
+            Constants.Timeouts.ErrorDialogSeconds
+        );
     }
 
-    private static void LogPromptRequest(string detectedType, string? description)
+    private static void LogPromptRequest(string? detectedType, string? description)
     {
         try
         {
@@ -42,6 +49,14 @@ public static class Pinentry
             }
 
             var logPath = config.Logging.Path;
+            if (string.IsNullOrEmpty(logPath))
+            {
+                Console.Error.WriteLine(
+                    "WARN: Logging is enabled but no log path is configured <Pinentry>"
+                );
+                return;
+            }
+
             var logDir = Path.GetDirectoryName(logPath);
             if (!string.IsNullOrEmpty(logDir))
             {
@@ -53,7 +68,8 @@ public static class Pinentry
                 ? "(none)"
                 : Uri.UnescapeDataString(description);
 
-            var logEntry = $"[{timestamp}] Type={detectedType} | Description={decodedDesc}\n";
+            var typeLabel = detectedType ?? "UNKNOWN";
+            var logEntry = $"[{timestamp}] Type={typeLabel} | Description={decodedDesc}\n";
 
             File.AppendAllText(logPath, logEntry);
             Console.Error.WriteLine($"INFO: Logged prompt request to {logPath} <Pinentry>");
@@ -170,15 +186,27 @@ public static class Pinentry
 
             Console.Error.WriteLine($"INFO: Showing confirmation dialog: {message} <Pinentry>");
 
-            // Show message box with OK/Cancel
-            int result = MessageBox(
-                IntPtr.Zero,
+            // Bounded dialog: a timeout is reported to gpg-agent as a cancellation
+            // rather than leaving the agent waiting forever.
+            var config = AppConfigManager.Load();
+            int result = DialogHelper.ShowWithTimeout(
                 message,
                 "GPG Windows Hello",
-                MB_OKCANCEL | MB_ICONINFORMATION
+                DialogHelper.MB_OKCANCEL | DialogHelper.MB_ICONINFORMATION,
+                config.Timeouts.DialogSeconds
             );
 
-            if (result == IDOK)
+            if (result == DialogHelper.IDTIMEOUT)
+            {
+                Console.Error.WriteLine(
+                    "WARN: Confirmation dialog timed out; replying cancelled <Pinentry>"
+                );
+                Console.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} Timed out");
+                Console.Out.Flush();
+                return;
+            }
+
+            if (result == DialogHelper.IDOK)
             {
                 Console.WriteLine("OK");
                 Console.Out.Flush();
@@ -214,23 +242,39 @@ public static class Pinentry
 
         var desc = Uri.UnescapeDataString(description).ToLowerInvariant();
 
-        // Exact smartcard/YubiKey PIN pattern from GPG
-        // Pattern: "Please unlock the card"
-        if (desc.StartsWith("please unlock the card"))
+        // Smartcard / OpenPGP card prompts. Matched on substrings rather than
+        // StartsWith because GPG varies and prefixes this wording between versions,
+        // and a card-insert prompt must not fall through to the unknown path.
+        if (
+            desc.Contains("unlock the card")
+            || desc.Contains("insert the card")
+            || desc.Contains("smartcard")
+            || desc.Contains("smart card")
+            || desc.Contains("openpgp card")
+            || desc.Contains("admin pin")
+            || desc.Contains("enter the pin")
+            || desc.Contains("pin for")
+            || desc.Contains("reset code")
+            || desc.Contains("puk")
+        )
         {
             return "pin";
         }
 
-        // Exact passphrase patterns from GPG
-        // Pattern: "Please enter the passphrase" or mentions "secret key"
-        if (desc.StartsWith("please enter the passphrase") || desc.Contains("secret key"))
+        // On-disk secret key passphrase prompts.
+        if (
+            desc.Contains("passphrase")
+            || desc.Contains("secret key")
+            || desc.Contains("password")
+        )
         {
             return "passphrase";
         }
 
-        // No match - return null to trigger error dialog
+        // No match. The caller falls back to the passphrase credential rather than
+        // raising a dialog - an unrecognised prompt must never stall gpg-agent.
         Console.Error.WriteLine(
-            $"ERROR: Unknown credential request pattern. Description: {desc} <Pinentry>"
+            $"WARN: Unrecognised credential request pattern. Description: {desc} <Pinentry>"
         );
         return null;
     }
@@ -243,37 +287,23 @@ public static class Pinentry
 
         try
         {
-            // Detect what GPG is asking for
-            var credentialType = DetectCredentialType(description);
+            // Detect what GPG is asking for.
+            var detectedType = DetectCredentialType(description);
 
-            // Check if detection failed
-            if (credentialType == null)
+            // Log BEFORE any branching. An unrecognised description is precisely the
+            // case worth recording, and it used to be the one case never logged.
+            LogPromptRequest(detectedType, description);
+
+            var credentialType = detectedType ?? FallbackCredentialType;
+
+            if (detectedType == null)
             {
-                var decodedDesc = string.IsNullOrEmpty(description)
-                    ? "(no description provided)"
-                    : Uri.UnescapeDataString(description);
-
-                var errorMsg =
-                    $"Unknown credential request from GPG.\n\n"
-                    + $"Description received:\n{decodedDesc}\n\n"
-                    + $"This pattern is not recognized. Please report this at:\n"
-                    + $"https://github.com/splack/gpg-winhello/issues\n\n"
-                    + $"Log file: %APPDATA%\\gpg-winhello\\prompt.log";
-
-                ShowErrorDialog(errorMsg);
-
                 Console.Error.WriteLine(
-                    $"ERR {Constants.AssuanErrors.GeneralError} Unknown credential type <Pinentry>"
+                    $"WARN: Unrecognised credential request; falling back to "
+                        + $"{FallbackCredentialType}. Enable Logging in config.json and report "
+                        + $"at https://github.com/splack/gpg-winhello/issues <Pinentry>"
                 );
-                Console.WriteLine(
-                    $"ERR {Constants.AssuanErrors.GeneralError} Unknown credential request pattern"
-                );
-                Console.Out.Flush();
-                return;
             }
-
-            // Log to file for debugging
-            LogPromptRequest(credentialType, description);
 
             Console.Error.WriteLine(
                 $"INFO: GPG requesting '{credentialType}' (description: {description ?? "none"}) <Pinentry>"
@@ -313,6 +343,12 @@ public static class Pinentry
                             $"ERR {Constants.AssuanErrors.GeneralError} Credential not enrolled - run 'gpg-winhello.exe enroll'"
                         );
                         Console.Out.Flush();
+
+                        // Advisory only - gpg-agent was answered on the line above.
+                        ShowErrorDialog(
+                            "No credentials are enrolled with Windows Hello. "
+                                + "Run: gpg-winhello.exe enroll"
+                        );
                         return;
                     }
                 }
@@ -364,14 +400,24 @@ public static class Pinentry
 
                 Console.Error.WriteLine($"INFO: Showing info dialog: {infoMessage} <Pinentry>");
 
-                int result = MessageBox(
-                    IntPtr.Zero,
+                int result = DialogHelper.ShowWithTimeout(
                     infoMessage,
                     "GPG Windows Hello",
-                    MB_OKCANCEL | MB_ICONINFORMATION
+                    DialogHelper.MB_OKCANCEL | DialogHelper.MB_ICONINFORMATION,
+                    config.Timeouts.DialogSeconds
                 );
 
-                if (result == IDCANCEL)
+                if (result == DialogHelper.IDTIMEOUT)
+                {
+                    Console.Error.WriteLine(
+                        "WARN: Info dialog timed out; replying cancelled <Pinentry>"
+                    );
+                    Console.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} Timed out");
+                    Console.Out.Flush();
+                    return;
+                }
+
+                if (result == DialogHelper.IDCANCEL)
                 {
                     Console.Error.WriteLine("INFO: User cancelled at info dialog <Pinentry>");
                     Console.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} Cancelled");
@@ -388,7 +434,7 @@ public static class Pinentry
             try
             {
                 encryptionKey = await WindowsHelloHelper
-                    .GetEncryptionKeyAsync()
+                    .GetEncryptionKeyAsync(config.Timeouts.HelloSeconds)
                     .ConfigureAwait(false);
                 if (encryptionKey == null)
                 {
@@ -407,6 +453,18 @@ public static class Pinentry
                     $"ERR {Constants.AssuanErrors.Cancelled} {ex.Message} <Pinentry>"
                 );
                 Console.WriteLine($"ERR {Constants.AssuanErrors.Cancelled} Authentication failed");
+                Console.Out.Flush();
+                return;
+            }
+            catch (TimeoutException ex)
+            {
+                // Hello never came back. Answer gpg-agent rather than hanging it.
+                Console.Error.WriteLine(
+                    $"ERR {Constants.AssuanErrors.Cancelled} {ex.Message} <Pinentry>"
+                );
+                Console.WriteLine(
+                    $"ERR {Constants.AssuanErrors.Cancelled} Windows Hello timed out"
+                );
                 Console.Out.Flush();
                 return;
             }

@@ -26,6 +26,26 @@ public class AppConfig
     /// </summary>
     public LoggingConfig Logging { get; set; } = new();
 
+    /// <summary>
+    /// Timeout configuration. Bounds every operation that could block gpg-agent.
+    /// </summary>
+    public TimeoutConfig Timeouts { get; set; } = new();
+
+    public class TimeoutConfig
+    {
+        /// <summary>
+        /// Seconds a confirmation dialog waits before auto-cancelling.
+        /// Clamped to [Constants.Timeouts.MinimumSeconds, Constants.Timeouts.MaximumSeconds].
+        /// </summary>
+        public int DialogSeconds { get; set; } = Constants.Timeouts.DialogSeconds;
+
+        /// <summary>
+        /// Seconds to wait for Windows Hello before giving up and replying to gpg-agent.
+        /// Clamped to [Constants.Timeouts.MinimumSeconds, Constants.Timeouts.MaximumSeconds].
+        /// </summary>
+        public int HelloSeconds { get; set; } = Constants.Timeouts.HelloSeconds;
+    }
+
     public class InfoDialogConfig
     {
         /// <summary>
@@ -113,6 +133,10 @@ public static partial class AppConfigManager
             );
         }
 
+        // Clamp timeouts so a malformed config can never reintroduce an unbounded wait.
+        config.Timeouts.DialogSeconds = ClampTimeout(config.Timeouts.DialogSeconds);
+        config.Timeouts.HelloSeconds = ClampTimeout(config.Timeouts.HelloSeconds);
+
         // Auto-create config file with defaults on first use
         if (shouldSave)
         {
@@ -154,6 +178,24 @@ public static partial class AppConfigManager
         {
             throw new IOException($"Failed to save config to {ConfigPath}: {ex.Message}", ex);
         }
+    }
+
+    /// <summary>
+    /// Clamps a configured timeout into a sane range. Guarantees a bounded wait.
+    /// </summary>
+    private static int ClampTimeout(int seconds)
+    {
+        if (seconds < Constants.Timeouts.MinimumSeconds)
+        {
+            return Constants.Timeouts.MinimumSeconds;
+        }
+
+        if (seconds > Constants.Timeouts.MaximumSeconds)
+        {
+            return Constants.Timeouts.MaximumSeconds;
+        }
+
+        return seconds;
     }
 
     /// <summary>
