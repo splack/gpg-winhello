@@ -1,42 +1,45 @@
 {
   "nodes": {
-    "flakelight": {
+    "flake-parts": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs-lib": [
+          "nixpkgs"
+        ]
       },
       "locked": {
-        "lastModified": 1762174261,
-        "narHash": "sha256-byLt7xPgKyYCbb4Cs/D8pDSA3nBgVLMGU6rIHzfseB0=",
-        "owner": "nix-community",
-        "repo": "flakelight",
-        "rev": "56f0270fe5f2ea39cdd94bd4c355071b25885149",
-        "type": "github"
+        "lastModified": 1788450739,
+        "narHash": "sha256-glZLQlzIn1fXH6PazR2iUmTo7kzzyYSshrWhLS9TqCU=",
+        "ref": "refs/heads/main",
+        "rev": "31729ca8cbdb4fa927b34e5f4353e6a83f39e993",
+        "revCount": 494,
+        "type": "git",
+        "url": "https://git.lanvise.com/lanvise/mirrors/github.com/hercules-ci/flake-parts"
       },
       "original": {
-        "owner": "nix-community",
-        "repo": "flakelight",
-        "type": "github"
+        "type": "git",
+        "url": "https://git.lanvise.com/lanvise/mirrors/github.com/hercules-ci/flake-parts"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1761907660,
-        "narHash": "sha256-kJ8lIZsiPOmbkJypG+B5sReDXSD1KGu2VEPNqhRa/ew=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "2fb006b87f04c4d3bdf08cfdbc7fab9c13d94a15",
-        "type": "github"
+        "lastModified": 1788881743,
+        "narHash": "sha256-2V9GZGvPfrNzxFozhI9dcqV+c3QdA8YZrvAAzqEB+dI=",
+        "ref": "nixos-unstable",
+        "rev": "d6524aaca2ff07876657ae2b323f24be4874944b",
+        "revCount": 1069856,
+        "type": "git",
+        "url": "https://git.lanvise.com/lanvise/mirrors/github.com/NixOS/nixpkgs"
       },
       "original": {
-        "owner": "NixOS",
         "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
+        "type": "git",
+        "url": "https://git.lanvise.com/lanvise/mirrors/github.com/NixOS/nixpkgs"
       }
     },
     "root": {
       "inputs": {
-        "flakelight": "flakelight"
+        "flake-parts": "flake-parts",
+        "nixpkgs": "nixpkgs"
       }
     }
   },

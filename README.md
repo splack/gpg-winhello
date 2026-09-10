@@ -239,7 +239,7 @@ Implements Assuan protocol:
 ```
 gpg-winhello/
 ├── *.cs, *.csproj          # C# source files
-├── flake.nix               # Flakelight-based Nix flake
+├── flake.nix               # flake-parts-based Nix flake
 └── nix/
     ├── dotnet-version.nix  # Shared .NET SDK version extraction
     └── packages/
@@ -247,9 +247,11 @@ gpg-winhello/
         └── deps.json       # NuGet dependencies lockfile
 ```
 
-The project uses [flakelight](https://github.com/nix-community/flakelight) for a
-simplified Nix flake structure with automatic package discovery and built-in
-formatting checks.
+The project uses [flake-parts](https://flake.parts/) for its flake structure.
+
+Flake inputs are fetched through the lanvise mirrors
+(`git+https://git.lanvise.com/lanvise/mirrors/github.com/...`) rather than from
+github.com directly, so evaluation does not depend on upstream availability.
 
 ### Building
 
@@ -333,7 +335,7 @@ Built using:
 - .NET 9.0
 - pinentry protocol specification
 - Nix buildDotnetModule for cross-compilation
-- [flakelight](https://github.com/nix-community/flakelight) for simplified Nix
+- [flake-parts](https://flake.parts/) for modular Nix
   flakes
 
 ## See Also

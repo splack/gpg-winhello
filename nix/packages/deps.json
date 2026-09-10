@@ -1,18 +1,18 @@
 [
   {
     "pname": "Microsoft.AspNetCore.App.Runtime.win-x64",
-    "version": "9.0.10",
-    "hash": "sha256-bsaFRhKv4Jn3Q7LF+aIqObpywjyJ/hBp7ifb7aNUTB8="
+    "version": "9.0.19",
+    "hash": "sha256-jsQA6MVPFLJbq6DL5sXemGpc47MNwY+FM3xx2yA2W8Q="
   },
   {
     "pname": "Microsoft.NETCore.App.Host.win-x64",
-    "version": "9.0.10",
-    "hash": "sha256-xY4FrdW2httM8L+0VDQZPtMyTVX/POK/FAB9p2Px7zk="
+    "version": "9.0.19",
+    "hash": "sha256-rB4eOcxRIXn+ipWK/fP/Gi83f2a7hhyOjQM01LbNn14="
   },
   {
     "pname": "Microsoft.NETCore.App.Runtime.win-x64",
-    "version": "9.0.10",
-    "hash": "sha256-NeqioPZ8jZuR8t2UWUPagZdFeXGqf0GA46sDOwumkHw="
+    "version": "9.0.19",
+    "hash": "sha256-hr+17dd5+ZcSvcjXFg+/LmaXgzEog+6kKhmBSWjURc4="
   },
   {
     "pname": "Microsoft.Windows.SDK.NET.Ref",
@@ -21,12 +21,12 @@
   },
   {
     "pname": "Microsoft.WindowsDesktop.App.Ref",
-    "version": "9.0.10",
-    "hash": "sha256-xY6W4jzMoxlhKBmcd1507wluBpL+1aPmVJGXcSxM0FY="
+    "version": "9.0.19",
+    "hash": "sha256-459AzXX0vezuncUVpiRdT/50jU9BTaw7HbkzA7UodJU="
   },
   {
     "pname": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
-    "version": "9.0.10",
-    "hash": "sha256-Ip+8+NT17GxMYkWf1neuJYw6dtXr0ueakslYGt+h9O0="
+    "version": "9.0.19",
+    "hash": "sha256-pq1qiZFd9l1+ebCYY/yTRCM4g0FuS1UBwiilBRGAEnA="
   }
 ]

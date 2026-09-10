@@ -8,6 +8,17 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- Migrated the flake from flakelight to
+  [flake-parts](https://flake.parts/), matching the lanvise repo.
+- Flake inputs now resolve through the lanvise mirrors
+  (`git+https://git.lanvise.com/lanvise/mirrors/github.com/...`) instead of
+  github.com, so evaluation does not depend on upstream availability.
+- Regenerated `nix/packages/deps.json` for .NET SDK 9.0.19; the newer nixpkgs
+  no longer carries the 9.0.10 runtime packs the old lockfile pinned.
+
+
 ### Fixed
 
 - **Pinentry no longer wedges gpg-agent.** Error and confirmation dialogs were modal
