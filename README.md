@@ -2,6 +2,9 @@
 
 Unlock your GPG SSH agent using Windows Hello fingerprint authentication.
 
+**Source:** <https://git.lanvise.com/andre/gpg-winhello>
+(also shown by `gpg-winhello.exe --version`)
+
 ## Features
 
 - **True biometric unlock**: Uses Windows Hello API for fingerprint
@@ -253,9 +256,14 @@ formatting checks.
 **With Nix (cross-compile from Linux)**:
 
 ```bash
+git clone https://git.lanvise.com/andre/gpg-winhello.git
+cd gpg-winhello
 nix build
 # Output: result/lib/gpg-winhello/gpg-winhello.exe
 ```
+
+This is the supported way to produce the Windows executable: the flake
+cross-compiles it from Linux, so no Windows toolchain is needed.
 
 **With dotnet (Windows)**:
 
