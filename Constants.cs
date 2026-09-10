@@ -14,6 +14,12 @@ public static class Constants
         Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "0.0.0";
 
     /// <summary>
+    /// Canonical source repository. Shown by --version and --help so the source is
+    /// discoverable from the installed binary alone.
+    /// </summary>
+    public const string RepositoryUrl = "https://git.lanvise.com/andre/gpg-winhello";
+
+    /// <summary>
     /// Assuan protocol error codes for pinentry.
     /// </summary>
     public static class AssuanErrors

@@ -301,7 +301,7 @@ public static class Pinentry
                 Console.Error.WriteLine(
                     $"WARN: Unrecognised credential request; falling back to "
                         + $"{FallbackCredentialType}. Enable Logging in config.json and report "
-                        + $"at https://github.com/splack/gpg-winhello/issues <Pinentry>"
+                        + $"at {Constants.RepositoryUrl}/issues <Pinentry>"
                 );
             }
 

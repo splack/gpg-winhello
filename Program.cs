@@ -47,6 +47,7 @@ class Program
     {
         Console.WriteLine($"gpg-winhello version {Constants.Version}");
         Console.WriteLine($"Runtime: {RuntimeInformation.FrameworkDescription}");
+        Console.WriteLine($"Repository: {Constants.RepositoryUrl}");
         return 0;
     }
 
@@ -69,7 +70,7 @@ class Program
             "  3. gpg-winhello.exe config    # Configure GPG agent (or edit manually)"
         );
         Console.WriteLine();
-        Console.WriteLine("For more information, see: https://github.com/splack/gpg-winhello");
+        Console.WriteLine($"For more information, see: {Constants.RepositoryUrl}");
         return 0;
     }
 }
