@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Windows.Security.Credentials;
 using Windows.Security.Cryptography;
@@ -25,22 +26,67 @@ public static class WindowsHelloHelper
     private const string Challenge = "gpg-winhello-deterministic-challenge-v1";
 
     /// <summary>
+    /// Bounds a WinRT async operation so it can never hang the pinentry.
+    ///
+    /// Cancellation is requested through the token, but a WinRT operation is not
+    /// obliged to honour it. Task.WhenAny guarantees we return regardless; an
+    /// abandoned operation dies with the process.
+    /// </summary>
+    private static async Task<T> WithTimeoutAsync<T>(
+        Func<CancellationToken, Task<T>> start,
+        int timeoutSeconds,
+        string operation
+    )
+    {
+        using var cts = new CancellationTokenSource();
+
+        var work = start(cts.Token);
+        var completed = await Task.WhenAny(work, Task.Delay(TimeSpan.FromSeconds(timeoutSeconds)))
+            .ConfigureAwait(false);
+
+        if (completed != work)
+        {
+            cts.Cancel();
+
+            // Observe any later fault so it never surfaces as an unhandled exception.
+            _ = work.ContinueWith(t => _ = t.Exception, TaskScheduler.Default);
+
+            throw new TimeoutException(
+                operation + " did not complete within " + timeoutSeconds + "s"
+            );
+        }
+
+        return await work.ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Checks if Windows Hello is supported on this device.
     /// </summary>
-    public static async Task<bool> IsSupportedAsync()
+    public static async Task<bool> IsSupportedAsync(
+        int timeoutSeconds = Constants.Timeouts.HelloSeconds
+    )
     {
-        return await KeyCredentialManager.IsSupportedAsync().AsTask().ConfigureAwait(false);
+        return await WithTimeoutAsync(
+                ct => KeyCredentialManager.IsSupportedAsync().AsTask(ct),
+                timeoutSeconds,
+                "Windows Hello support check"
+            )
+            .ConfigureAwait(false);
     }
 
     /// <summary>
     /// Checks if a Windows Hello key credential already exists for this application.
     /// This does not trigger biometric authentication, only checks for existence.
     /// </summary>
-    public static async Task<bool> KeyExistsAsync()
+    public static async Task<bool> KeyExistsAsync(
+        int timeoutSeconds = Constants.Timeouts.HelloSeconds
+    )
     {
-        var openResult = await KeyCredentialManager
-            .OpenAsync(KeyName)
-            .AsTask()
+        var openResult = await WithTimeoutAsync(
+                ct => KeyCredentialManager.OpenAsync(KeyName).AsTask(ct),
+                timeoutSeconds,
+                "Windows Hello key lookup"
+            )
             .ConfigureAwait(false);
         return openResult.Status == KeyCredentialStatus.Success;
     }
@@ -49,11 +95,18 @@ public static class WindowsHelloHelper
     /// Creates a new Windows Hello key credential for this application.
     /// This will prompt the user for biometric authentication.
     /// </summary>
-    public static async Task<bool> CreateKeyAsync()
+    public static async Task<bool> CreateKeyAsync(
+        int timeoutSeconds = Constants.Timeouts.HelloSeconds
+    )
     {
-        var result = await KeyCredentialManager
-            .RequestCreateAsync(KeyName, KeyCredentialCreationOption.ReplaceExisting)
-            .AsTask()
+        var result = await WithTimeoutAsync(
+                ct =>
+                    KeyCredentialManager
+                        .RequestCreateAsync(KeyName, KeyCredentialCreationOption.ReplaceExisting)
+                        .AsTask(ct),
+                timeoutSeconds,
+                "Windows Hello key creation"
+            )
             .ConfigureAwait(false);
 
         return result.Status == KeyCredentialStatus.Success;
@@ -64,16 +117,20 @@ public static class WindowsHelloHelper
     /// This will prompt the user for biometric authentication.
     /// IMPORTANT: Caller must call Array.Clear(key, 0, key.Length) when done with the key.
     /// </summary>
-    public static async Task<byte[]?> GetEncryptionKeyAsync()
+    public static async Task<byte[]?> GetEncryptionKeyAsync(
+        int timeoutSeconds = Constants.Timeouts.HelloSeconds
+    )
     {
         byte[]? signatureBytes = null;
         byte[]? keyBytes = null;
 
         try
         {
-            var openResult = await KeyCredentialManager
-                .OpenAsync(KeyName)
-                .AsTask()
+            var openResult = await WithTimeoutAsync(
+                    ct => KeyCredentialManager.OpenAsync(KeyName).AsTask(ct),
+                    timeoutSeconds,
+                    "Windows Hello key open"
+                )
                 .ConfigureAwait(false);
 
             if (openResult.Status != KeyCredentialStatus.Success)
@@ -88,9 +145,11 @@ public static class WindowsHelloHelper
                 BinaryStringEncoding.Utf8
             );
 
-            var signResult = await openResult
-                .Credential.RequestSignAsync(challengeBuffer)
-                .AsTask()
+            var signResult = await WithTimeoutAsync(
+                    ct => openResult.Credential.RequestSignAsync(challengeBuffer).AsTask(ct),
+                    timeoutSeconds,
+                    "Windows Hello signature"
+                )
                 .ConfigureAwait(false);
 
             if (signResult.Status != KeyCredentialStatus.Success)
@@ -127,6 +186,13 @@ public static class WindowsHelloHelper
         catch (InvalidOperationException)
         {
             // Clear and rethrow Windows Hello errors
+            if (keyBytes != null)
+                Array.Clear(keyBytes, 0, keyBytes.Length);
+            throw;
+        }
+        catch (TimeoutException)
+        {
+            // Clear and rethrow - the caller replies to gpg-agent instead of hanging.
             if (keyBytes != null)
                 Array.Clear(keyBytes, 0, keyBytes.Length);
             throw;

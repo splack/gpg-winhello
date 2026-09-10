@@ -8,6 +8,32 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- **Pinentry no longer wedges gpg-agent.** Error and confirmation dialogs were modal
+  `MessageBox` calls with no owner window and no timeout, raised from a process
+  gpg-agent spawns with no visible UI. When such a dialog could not be seen or
+  focused it blocked forever, the Assuan reply was never written, and gpg-agent
+  hung - taking every subsequent GPG and SSH operation with it until the agent was
+  reloaded or the machine rebooted.
+- Unrecognised credential descriptions now fall back to the passphrase credential
+  instead of raising a blocking dialog. A card-insert prompt (raised whenever an
+  OpenPGP card is enrolled but absent) matched no known pattern and hit this path.
+- Unrecognised descriptions are now logged. `LogPromptRequest` ran only after the
+  detection check returned, so the one case worth diagnosing was never recorded.
+- Credential detection matches on substrings rather than `StartsWith`, and
+  recognises card-insert, admin PIN, reset code and PUK prompts.
+
+### Added
+
+- All dialogs are bounded by a timeout and forced to the foreground; a timeout is
+  reported to gpg-agent as a cancellation rather than leaving it waiting.
+- All Windows Hello calls are bounded by a timeout. There were previously no
+  timeouts or cancellation anywhere in the codebase.
+- `Timeouts.DialogSeconds` and `Timeouts.HelloSeconds` config options, clamped to a
+  sane range on load so a malformed config cannot reintroduce an unbounded wait.
+
+
 ### Changed
 
 - Storage format now uses JSON exclusively (Version 2 multi-credential format)

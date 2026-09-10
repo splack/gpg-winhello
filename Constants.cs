@@ -30,6 +30,39 @@ public static class Constants
     }
 
     /// <summary>
+    /// Timeouts bounding every operation that could otherwise block gpg-agent forever.
+    /// A pinentry that never replies wedges the agent and every GPG/SSH operation
+    /// behind it until the agent is reloaded.
+    /// </summary>
+    public static class Timeouts
+    {
+        /// <summary>
+        /// Seconds before a confirmation dialog auto-cancels.
+        /// </summary>
+        public const int DialogSeconds = 60;
+
+        /// <summary>
+        /// Seconds before a Windows Hello prompt is abandoned.
+        /// </summary>
+        public const int HelloSeconds = 120;
+
+        /// <summary>
+        /// Seconds an advisory (non-blocking) error dialog stays on screen.
+        /// </summary>
+        public const int ErrorDialogSeconds = 30;
+
+        /// <summary>
+        /// Lower bound applied to any configured timeout.
+        /// </summary>
+        public const int MinimumSeconds = 5;
+
+        /// <summary>
+        /// Upper bound applied to any configured timeout.
+        /// </summary>
+        public const int MaximumSeconds = 600;
+    }
+
+    /// <summary>
     /// Cryptographic constants.
     /// </summary>
     public static class Crypto
