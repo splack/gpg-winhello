@@ -11,12 +11,19 @@
       url = "git+https://git.lanvise.com/lanvise/mirrors/github.com/hercules-ci/flake-parts";
       inputs.nixpkgs-lib.follows = "nixpkgs";
     };
+
+    treefmt-nix = {
+      url = "git+https://git.lanvise.com/lanvise/mirrors/github.com/numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
     inputs:
     inputs.flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" ];
+
+      imports = [ inputs.treefmt-nix.flakeModule ];
 
       perSystem =
         { pkgs, lib, self', ... }:
@@ -31,11 +38,20 @@
           # The Windows executable, cross-compiled from Linux.
           packages.default = pkgs.callPackage ./nix/packages/_default.nix { };
 
-          # `nix fmt` - CSharpier rather than `dotnet format`, which needs a
-          # restored project and does not play well under Nix.
-          formatter = pkgs.writeShellScriptBin "fmt" ''
-            exec ${lib.getExe pkgs.csharpier} format "$@"
-          '';
+          # `nix fmt` - treefmt, which also sets `formatter` and adds a
+          # `checks.treefmt`. C# goes through CSharpier rather than
+          # `dotnet format`, which needs a restored project and does not play
+          # well under Nix.
+          treefmt = {
+            projectRootFile = "flake.nix";
+            programs.csharpier.enable = true;
+            programs.nixfmt.enable = true;
+            # CSharpier keeps its own cache (in the user's cache dir) on top of
+            # treefmt's. `nix fmt -- --no-cache` only bypasses treefmt's, so
+            # CSharpier's is always bypassed: a no-cache run is then truly
+            # uncached, and treefmt's cache already skips unchanged files.
+            settings.formatter.csharpier.options = [ "--no-cache" ];
+          };
 
           # `nix run .#update-deps` - regenerate the NuGet lockfile.
           apps.update-deps = {
